@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador BlaBlaCar Multi-Datas</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        h1 {
+            text-align: center;
+            color: #0071c2;
+            margin-top: 0;
+        }
+        .form-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .form-group input,
+        .form-group select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box; 
+            background-color: #fff;
+        }
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* --- Estilos do Autocompletar --- */
+        .autocomplete-container {
+            position: relative;
+        }
+        .suggestions-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border: 1px solid #ccc;
+            border-top: none;
+            background: #fff;
+            z-index: 100;
+            max-height: 200px;
+            overflow-y: auto;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        /* --- Botão de Troca --- */
+        #btn-swap-cities {
+            position: absolute;
+            top: 40px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50; 
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+            line-height: 40px;
+            text-align: center;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        #btn-swap-cities:hover {
+            background-color: #e0e0e0;
+            border-color: #999;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            background-color: #054a81;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+        #loading {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #555;
+            margin-top: 20px;
+            display: none; 
+        }
+        h2#counter-results {
+            text-align: center;
+            font-size: 1.3rem;
+            color: #333;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+        }
+        #results-container {
+            margin-top: 10px;
+        }
+        .error-box {
+            padding: 10px;
+            background-color: #fff8f8;
+            border: 1px solid #e0b4b4;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        /* ================== ESTILOS DO CARD (REVERTIDO) ================== */
+        a.trip-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: box-shadow 0.2s ease;
+        }
+        a.trip-card:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+        
+        .trip-top-part {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 15px;
+        }
+        
+        .trip-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0071c2;
+            text-align: right;
+            white-space: nowrap;
+            margin-left: 15px;
+        }
+        
+        .trip-bottom-part {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #f9f9f9;
+            border-top: 1px solid #eee;
+        }
+        .trip-bottom-part img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        .trip-bottom-part .driver-info {
+            flex: 1;
+        }
+        .trip-bottom-part h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            color: #333;
+        }
+        .trip-bottom-part .rating {
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        .trip-bottom-part .amenity {
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: 500;
+        }
+
+        /* --- Estilos do Bloco de Horário (Revertido e SEM bolinhas) --- */
+        .trip-time-details {
+            display: grid;
+            grid-template-columns: auto 1fr auto; /* Esquerda | Linha | Direita */
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        .time-block .time {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .time-block .city {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+            margin-top: 4px; /* Espaço que era da bolinha */
+            margin-bottom: 4px; /* Espaço que era da bolinha */
+        }
+        .time-block .date {
+            font-size: 0.85rem;
+            color: #777;
+            margin-top: 2px;
+        }
+        
+        .duration-line-container {
+            text-align: center;
+            position: relative;
+        }
+        .duration-line-text {
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: 600;
+            background: #fff;
+            padding: 0 5px;
+            position: relative;
+            z-index: 1;
+        }
+        .duration-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%; 
+            height: 2px;
+            background-color: #0071c2;
+            z-index: 0;
+        }
+        /* ================== FIM DOS ESTILOS DO CARD ================== */
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Buscador de Caronas BlaBlaCar</h1>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="input-origem">Origem</label>
+                <div class="autocomplete-container">
+                    <input type="text" id="input-origem" placeholder="Digite 2+ letras...">
+                    <div class="suggestions-box" id="suggestions-origem"></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="input-destino">Destino</label>
+                <div class="autocomplete-container">
+                    <input type="text" id="input-destino" placeholder="Digite 2+ letras...">
+                    <div class="suggestions-box" id="suggestions-destino"></div>
+                </div>
+            </div>
+
+            <button type="button" id="btn-swap-cities" title="Inverter origem e destino">&#8646;</button>
+            
+            <div class="form-group">
+                <label for="data-inicio">Data de Início</label>
+                <input type="date" id="data-inicio" required>
+            </div>
+            <div class="form-group">
+                <label for="data-fim">Data de Fim</label>
+                <input type="date" id="data-fim" required>
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="sort-order">Ordenar por</label>
+                <select id="sort-order">
+                    <option value="price" selected>Preço (mais barato)</option>
+                    <option value="date">Data (mais cedo)</option>
+                </select>
+            </div>
+        </div>
+
+        <button id="btn-buscar">Buscar Caronas</button>
+
+        <div id="loading">
+            Buscando em todos os dias...
+        </div>
+        
+        <h2 id="counter-results" style="display: none;"></h2>
+        <div id="results-container">
+            <div id="error-container"></div>
+            <div id="trip-cards-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- PONTO DE EDIÇÃO ---
+        const authToken = 'Bearer 60bcbcd5-7655-4bc4-a1d3-8713b3eb261f';
+        // -------------------------
+        
+        // --- LÓGICA DO AUTOCOMPLETAR ---
+        const todasAsCidades = [
+            { nome: "João Pessoa", placeId: "ChIJ16OaATnorAcRNNsmbZxKQW4" }, { nome: "Campina Grande", placeId: "ChIJ7Uf3-PAAascRLt1s6n1D3gU" }, { nome: "Patos", placeId: "ChIJI_yX-E9_aAcR1jYv-i-I-LA" }, { nome: "Santa Rita", placeId: "ChIJJb3EtoR-rAcR-P-g-YwT-9Q" }, { nome: "Sousa", placeId: "ChIJlW-MWxJ_aAcRLZ4w3-0RUnA" }, { nome: "Cajazeiras", placeId: "ChIJ43dO5nF_aAcRp-H-k9Nqz3s" }, { nome: "Recife", placeId: "ChIJi0DllG8ZqwcRpuO9gvcOgOU" }, { nome: "Olinda", placeId: "ChIJ8yXm-AN_rwcRFf-qS0I-wxg" }, { nome: "Jaboatão dos Guararapes", placeId: "ChIJX_Gb-GN9rwcR6L-F-lcy-G8" }, { nome: "Caruaru", placeId: "ChIJbf3X6JaLqQcR9T42nnxcCqM" }, { nome: "Petrolina", placeId: "ChIJSdayUoR6cwcR7QpOycAd56A" }, { nome: "Garanhuns", placeId: "ChIJN_y4F-qWqgcRuPQk0Pza-rE" }
+        ];
+
+        function normalizarTexto(texto) {
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        }
+
+        function setupAutocomplete(inputId, suggestionsId) {
+            const input = document.getElementById(inputId);
+            const suggestionsBox = document.getElementById(suggestionsId);
+
+            input.addEventListener('input', () => {
+                const valor = input.value;
+                const valorNormalizado = normalizarTexto(valor);
+                input.dataset.selectedPlaceId = ""; 
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+
+                if (valor.length < 2) return;
+
+                const cidadesFiltradas = todasAsCidades.filter(c => normalizarTexto(c.nome).includes(valorNormalizado));
+
+                if (cidadesFiltradas.length > 0) {
+                    suggestionsBox.style.display = 'block';
+                    cidadesFiltradas.forEach(cidade => {
+                        const item = document.createElement('div');
+                        item.className = 'suggestion-item';
+                        item.textContent = cidade.nome;
+                        item.addEventListener('mousedown', () => { 
+                            input.value = cidade.nome; 
+                            input.dataset.selectedPlaceId = cidade.placeId;
+                            suggestionsBox.innerHTML = '';
+                            suggestionsBox.style.display = 'none';
+                        });
+                        suggestionsBox.appendChild(item);
+                    });
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => { suggestionsBox.innerHTML = ''; suggestionsBox.style.display = 'none'; }, 150);
+            });
+        }
+        // --- FIM DO AUTOCOMPLETAR ---
+
+        // --- Variáveis Globais ---
+        const btnBuscar = document.getElementById('btn-buscar');
+        const btnSwap = document.getElementById('btn-swap-cities');
+        const loadingDiv = document.getElementById('loading');
+        const sortOrderSelect = document.getElementById('sort-order');
+        const counterResults = document.getElementById('counter-results');
+        const errorContainer = document.getElementById('error-container');
+        const tripCardsList = document.getElementById('trip-cards-list');
+        const inputOrigem = document.getElementById('input-origem');
+        const inputDestino = document.getElementById('input-destino');
+        let caronasEncontradas = [];
+        let errosEncontrados = [];
+        // -------------------------
+
+        const baseUrl = 'https://edge.blablacar.com.br/trip/search/v8';
+        const staticParams = { 'requested_seats': '1', 'search_origin': 'SEARCH', 'transport_type': 'CARPOOLING', 'p0[ac]': 'adult', 'p0[pid]': 'ce6f0b7c-3094-4ccc-b314-eea32c0b5ae2', 'p0[a]': '27' };
+        const staticHeaders = { 'Accept': '*/*', 'Accept-Language': 'pt-BR', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.6533.100 Safari/537.36', 'X-Blablacar-Openapi-Codegen-Endpoint': 'GET /trip/search/v8', 'X-Blablacar-Openapi-Codegen-Type': 'typescript', 'X-Blablacar-Openapi-Codegen-Version': '3.4496.0', 'X-Client': 'SPA|1.0.0', 'X-Currency': 'BRL', 'X-Locale': 'pt_BR', 'X-Visitor-Id': '354518a3-25b1-4710-ae08-df4db309084a', 'X-Viewport-Height': '630', 'X-Viewport-Width': '1360' };
+
+        function buildPlaceId(googlePlaceId) {
+            const data = { "i": googlePlaceId, "p": 1, "v": 1, "t": [4] };
+            return btoa(JSON.stringify(data));
+        }
+
+        // --- Event Listeners ---
+        btnBuscar.addEventListener('click', buscarViagens);
+        sortOrderSelect.addEventListener('change', reordenarERenderizar);
+        
+        btnSwap.addEventListener('click', () => {
+            const [origemText, origemId] = [inputOrigem.value, inputOrigem.dataset.selectedPlaceId];
+            const [destinoText, destinoId] = [inputDestino.value, inputDestino.dataset.selectedPlaceId];
+            [inputOrigem.value, inputOrigem.dataset.selectedPlaceId] = [destinoText, destinoId];
+            [inputDestino.value, inputDestino.dataset.selectedPlaceId] = [origemText, origemId];
+        });
+
+        async function buscarViagens() {
+            const fromGoogleId = inputOrigem.dataset.selectedPlaceId;
+            const toGoogleId = inputDestino.dataset.selectedPlaceId;
+            const dataInicio = document.getElementById('data-inicio').value;
+            const dataFim = document.getElementById('data-fim').value;
+
+            if (!dataInicio || !dataFim) { alert('Por favor, selecione a data de início e fim.'); return; }
+            if (!fromGoogleId || !toGoogleId) { alert('Por favor, selecione uma cidade de ORIGEM e DESTINO da lista de sugestões.'); return; }
+            
+            const fromId = buildPlaceId(fromGoogleId);
+            const toId = buildPlaceId(toGoogleId);
+
+            btnBuscar.disabled = true;
+            btnBuscar.textContent = 'Buscando...';
+            tripCardsList.innerHTML = ''; 
+            errorContainer.innerHTML = '';
+            caronasEncontradas = [];
+            errosEncontrados = [];
+            counterResults.style.display = 'none';
+            loadingDiv.style.display = 'block'; // Mostra "Buscando em todos os dias..."
+
+            const datas = getDatasNoIntervalo(dataInicio, dataFim);
+            const headers = { ...staticHeaders, 'Authorization': authToken }; 
+            
+            // ================== MUDANÇA PARA "MULTITHREAD" ==================
+            // Cria um array de promessas, uma para cada dia
+            const promessasDeBusca = datas.map(data => 
+                fetchDiaCompleto(fromId, toId, data, headers)
+            );
+            
+            try {
+                // Espera todas as buscas de todos os dias (e suas páginas) terminarem
+                await Promise.all(promessasDeBusca);
+            } catch (err) {
+                // Erros de busca já são tratados em fetchDiaCompleto, 
+                // mas podemos logar se a Promise.all falhar por algum motivo
+                console.error("Erro geral no processamento das buscas:", err);
+            } finally {
+                btnBuscar.disabled = false;
+                btnBuscar.textContent = 'Buscar Caronas';
+                loadingDiv.style.display = 'none';
+                reordenarERenderizar(); // Renderização final
+            }
+            // ================== FIM DA MUDANÇA ==================
+        }
+
+        /**
+         * NOVO: Função que busca TODAS as páginas de UM dia.
+         * Esta função será chamada em paralelo para cada dia.
+         */
+        async function fetchDiaCompleto(fromId, toId, data, headers) {
+            let nextCursor = null;
+            let pagina = 1;
+
+            do {
+                try {
+                    const responseJson = await fetchViagens(fromId, toId, data, headers, nextCursor);
+                    processarResultados(responseJson, data);
+                    
+                    // Atualiza a tela a CADA PÁGINA recebida
+                    reordenarERenderizar(); 
+                    
+                    nextCursor = (responseJson.pagination && responseJson.pagination.next_cursor) ? responseJson.pagination.next_cursor : null;
+                    if(nextCursor) console.log(`[PAGINAÇÃO] Dia ${data}: Próxima página... (${pagina+1})`);
+                    pagina++;
+                } catch (error) {
+                    console.error(`Falha na busca para ${data} (página: ${pagina}).`, error);
+                    processarErro(data, error);
+                    reordenarERenderizar(); // Mostra o erro imediatamente
+                    nextCursor = null; // Para o loop deste dia
+                }
+            } while (nextCursor != null);
+        }
+
+        async function fetchViagens(fromId, toId, data, headers, cursor) {
+            const url = new URL(baseUrl);
+            const params = new URLSearchParams(); 
+            
+            params.set('from_place_id', fromId);
+            params.set('to_place_id', toId);
+            params.set('departure_date', data);
+            
+            Object.keys(staticParams).forEach(key => params.set(key, staticParams[key]));
+            params.set('search_uuid', crypto.randomUUID());
+
+            if (cursor) params.set('from_cursor', cursor);
+
+            url.search = params.toString();
+            console.log(`[REQ] ${data} (Cursor: ${cursor || 'nenhum'})`);
+
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: new Headers(headers),
+                cache: 'no-cache'
+            });
+
+            if (!response.ok) {
+                let responseBody = await response.text();
+                console.error(`[ERRO] ${data}: ${response.status}`, responseBody);
+                if (response.status === 401 || response.status === 403) throw new Error(`Erro de Autorização (${response.status}). Token expirado.`);
+                throw new Error(`Erro de Rede: ${response.status} ${response.statusText}.`);
+            }
+            
+            console.log(`[OK] ${data}: Sucesso.`);
+            return await response.json();
+        }
+
+        function processarResultados(data, dataStr) {
+            const caronas = data.search_items
+                .filter(item => item.trip && item.trip.publishing_conditions.supply_type === 'CARPOOL')
+                .map(item => item.trip);
+
+            caronas.forEach(trip => {
+                const precoStr = trip.price_details.tokenized_price.map(t => t.token).join(''); 
+                let precoNumStr = precoStr.replace(/[^\d,.]/g, ''); 
+                if (precoNumStr.includes(',')) {
+                    precoNumStr = precoNumStr.replace(/\./g, ''); 
+                    precoNumStr = precoNumStr.replace(',', '.');  
+                }
+                trip.precoNumero = parseFloat(precoNumStr);
+                
+                if (isNaN(trip.precoNumero)) console.warn("Falha ao parsear preço:", precoNumStr, "(string original:", precoStr, ")");
+                
+                trip.dataDaViagem = dataStr; 
+                trip.dataTimestamp = new Date(trip.waypoints[0].departure_datetime).getTime();
+                
+                caronasEncontradas.push(trip);
+            });
+        }
+        
+        function processarErro(data, error) {
+            errosEncontrados.push({ data: data, message: error.message });
+        }
+        
+        function reordenarERenderizar() {
+            const totalCaronas = caronasEncontradas.length;
+            if (totalCaronas > 0) {
+                counterResults.textContent = `${totalCaronas} carona(s) encontrada(s)`;
+                counterResults.style.display = 'block';
+            } else if (!btnBuscar.disabled) {
+                 counterResults.style.display = 'none';
+            }
+            
+            const sortBy = sortOrderSelect.value;
+            
+            if (sortBy === 'price') {
+                caronasEncontradas.sort((a, b) => (a.precoNumero || Infinity) - (b.precoNumero || Infinity));
+            } else { // 'date'
+                caronasEncontradas.sort((a, b) => (a.dataTimestamp || 0) - (b.dataTimestamp || 0));
+            }
+            
+            tripCardsList.innerHTML = '';
+            errorContainer.innerHTML = '';
+            
+            errosEncontrados.forEach(err => renderizarErro(err.data, err.message));
+            caronasEncontradas.forEach(trip => { tripCardsList.innerHTML += criarCardHtml(trip); });
+            
+            if (totalCaronas === 0 && errosEncontrados.length === 0 && !btnBuscar.disabled) {
+                tripCardsList.innerHTML = '<p>Nenhuma carona encontrada para o período selecionado.</p>';
+            }
+        }
+
+        /**
+         * ATUALIZADO: Gera o HTML para o layout REVERTIDO (sem bolinhas)
+         */
+        function criarCardHtml(trip) {
+            const idCarona = trip.multimodal_id.id;
+            const url = `https://www.blablacar.com.br/trip?source=CARPOOLING&id=${idCarona}&requested_seats=1&search_origin=SEARCH`;
+            
+            const preco = trip.price_details.tokenized_price.map(t => t.token).join('');
+            
+            const saida = new Date(trip.waypoints[0].departure_datetime);
+            const chegada = new Date(trip.waypoints[trip.waypoints.length - 1].departure_datetime);
+            const horarioSaida = saida.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const horarioChegada = chegada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const localSaida = trip.waypoints[0].main_text;
+            const localChegada = trip.waypoints[trip.waypoints.length - 1].main_text;
+            const dataFormatada = formatarData(trip.dataDaViagem); 
+
+            const driver = trip.publishing_conditions.profiles[0].driver;
+            const ratingNum = driver.rating ? driver.rating.overall.toString().replace('.', ',') : '';
+            const rating = ratingNum ? `★ ${ratingNum}` : '';
+            const reservaAutomatica = trip.publishing_conditions.amenities.find(a => a.label === "Reserva Automática");
+
+            return `
+            <a href="${url}" target="_blank" class="trip-card">
+                <div class="trip-top-part">
+                    
+                    <div class="trip-time-details">
+                        <div class="time-block">
+                            <span class="time">${horarioSaida}</span>
+                            <span class="city">${localSaida}</span>
+                            <span class="date">${dataFormatada}</span>
+                        </div>
+                        
+                        <div class="duration-line-container">
+                            <span class="duration-line-text">${trip.total_duration}</span>
+                            <div class="duration-line"></div>
+                        </div>
+                        
+                        <div class="time-block" style="text-align: right;">
+                            <span class="time">${horarioChegada}</span>
+                            <span class="city">${localChegada}</span>
+                            <span class="date">${dataFormatada}</span>
+                        </div>
+                    </div>
+
+                    <div class="trip-price">
+                        ${preco}
+                    </div>
+                </div>
+                
+                <div class="trip-bottom-part">
+                    <img src="${driver.avatar}" alt="Foto de ${driver.display_name}">
+                    <div class="driver-info">
+                        <h3>${driver.display_name} <span class="rating">${rating}</span></h3>
+                    </div>
+                    ${reservaAutomatica ? `<span class="amenity">Reserva Automática</span>` : ''}
+                </div>
+            </a>
+            `;
+        }
+
+        function renderizarErro(data, errorMessage) {
+            const divErro = document.createElement('div');
+            divErro.className = 'error-box';
+            divErro.innerHTML = `<p>Falha ao buscar para ${formatarData(data)}: ${errorMessage}</p>
+                                <p class="details">(Verifique o console para mais detalhes)</p>`;
+            errorContainer.appendChild(divErro);
+        }
+
+        // --- Funções Utilitárias ---
+        function getDatasNoIntervalo(inicio, fim) {
+            const datas = [];
+            let dataAtual = new Date(inicio + 'T12:00:00');
+            const dataFim = new Date(fim + 'T12:00:00');
+            while (dataAtual <= dataFim) {
+                datas.push(dataAtual.toISOString().split('T')[0]); 
+                dataAtual.setDate(dataAtual.getDate() + 1);
+            }
+            return datas;
+        }
+        
+        function formatarData(dataStr) {
+            const [ano, mes, dia] = dataStr.split('-');
+            return `${dia}/${mes}/${ano}`;
+        }
+        
+        // --- INICIALIZAÇÃO ---
+        setupAutocomplete('input-origem', 'suggestions-origem');
+        setupAutocomplete('input-destino', 'suggestions-destino');
+
+        (function setDefaults() {
+            const hoje = new Date();
+            const amanha = new Date(hoje);
+            amanha.setDate(hoje.getDate() + 1);
+            document.getElementById('data-inicio').value = hoje.toISOString().split('T')[0];
+            document.getElementById('data-fim').value = amanha.toISOString().split('T')[0];
+            
+            inputOrigem.value = "João Pessoa";
+            inputOrigem.dataset.selectedPlaceId = "ChIJ16OaATnorAcRNNsmbZxKQW4";
+            inputDestino.value = "Recife";
+            inputDestino.dataset.selectedPlaceId = "ChIJi0DllG8ZqwcRpuO9gvcOgOU";
+        })();
+
+    </script>
+</body>
+</html>
